@@ -3,37 +3,35 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    FLASK_APP="src:create_app()" \
     FLASK_ENV=production \
     FLASK_DEBUG=0
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and create non-root user
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-        && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m appuser
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir gunicorn
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copy application code
 COPY src/ src/
 
-# Create a non-root user
-RUN useradd -m appuser && \
-    chown -R appuser:appuser /app
+# Set permissions and switch to non-root user
+RUN chown -R appuser:appuser /app
 USER appuser
-
-# Expose the port
-EXPOSE 5004
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:5004/ || exit 1
+    CMD curl -f http://localhost:5004/api/status || exit 1
+
+EXPOSE 5004
 
 # Use Gunicorn for production
 CMD ["gunicorn", "--bind", "0.0.0.0:5004", "--workers", "4", "--timeout", "60", "src:create_app()"]
