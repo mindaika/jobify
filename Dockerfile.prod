@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir gunicorn
 
 # Copy application code
-COPY . .
+COPY src/ src/
 
 # Create a non-root user
 RUN useradd -m appuser && \
