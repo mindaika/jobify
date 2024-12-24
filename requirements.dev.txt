@@ -7,4 +7,3 @@ Flask-Cors==4.0.0
 httpx==0.28.1
 reportlab==4.0.9
 markdown==3.5.2
-pillow==11.0.0
