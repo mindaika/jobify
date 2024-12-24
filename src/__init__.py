@@ -33,8 +33,8 @@ def create_app():
         client = Anthropic(api_key=api_key, http_client=http_client)
 
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
-            max_tokens=100,
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
             temperature=0.7,
             messages=[{"role": "user", "content": "Test message"}],
         )
