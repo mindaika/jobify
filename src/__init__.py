@@ -13,8 +13,13 @@ def create_app():
                 static_folder='static',
                 static_url_path='')
     
-    # Enable CORS
-    CORS(app)
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
     
     app.config.update(
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
@@ -38,8 +43,13 @@ def create_app():
         """Health check endpoint"""
         return jsonify({"status": "okeydokey"})
 
-    @app.route('/api/process_resume', methods=['POST'])
+    @app.route('/process_resume', methods=['POST', 'OPTIONS'])
     def process_resume():
+        if request.method == 'OPTIONS':
+            response = jsonify({'status': 'ok'})
+            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+            return response
         """Process resume and return improved version"""
         try:
             # Validate file upload
