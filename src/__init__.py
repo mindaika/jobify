@@ -43,7 +43,7 @@ def create_app():
         """Health check endpoint"""
         return jsonify({"status": "okeydokey"})
 
-    @app.route('/process_resume', methods=['POST', 'OPTIONS'])
+    @app.route('/api/process_resume', methods=['POST', 'OPTIONS'])
     def process_resume():
         if request.method == 'OPTIONS':
             response = jsonify({'status': 'ok'})
