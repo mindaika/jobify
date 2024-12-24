@@ -1,9 +1,7 @@
-from flask import Flask, jsonify, request, send_from_directory, send_file
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
-import httpx
 from werkzeug.utils import secure_filename
-from io import BytesIO
 from .utils import (
     allowed_file, 
     extract_text_from_file, 
@@ -22,27 +20,6 @@ def create_app():
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
         UPLOAD_FOLDER='/tmp',                 # Temporary storage for uploads
     )
-    
-    
-    @app.route('/api/debug21556')
-    def debug():
-        from anthropic import Anthropic
-        api_key = os.getenv('ANTHROPIC_API_KEY')
-        
-        http_client = httpx.Client()
-        client = Anthropic(api_key=api_key, http_client=http_client)
-
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1024,
-            temperature=0.7,
-            messages=[{"role": "user", "content": "Test message"}],
-        )
-        print(response)
-        
-        
-        return jsonify({"status": "ok"})
-
 
     @app.route('/')
     def serve_static():
@@ -59,7 +36,7 @@ def create_app():
     @app.route('/api/status')
     def api_status():
         """Health check endpoint"""
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "okeydokey"})
 
     @app.route('/api/process_resume', methods=['POST'])
     def process_resume():
@@ -88,7 +65,6 @@ def create_app():
             # Get form data
             job_description = request.form.get('job_description', '')
             improvement_prompt = request.form.get('improvement_prompt', '')
-            output_format = request.form.get('output_format', 'text')  # 'text' or 'pdf'
 
             if not job_description:
                 return jsonify({
@@ -115,23 +91,13 @@ def create_app():
                 result = processor.process_document(
                     document_text=resume_text,
                     job_description=job_description,
-                    improvement_prompt=improvement_prompt,
-                    output_format=output_format
+                    improvement_prompt=improvement_prompt
                 )
 
-                # Return based on requested format
-                if output_format == 'pdf':
-                    return send_file(
-                        BytesIO(result),
-                        mimetype='application/pdf',
-                        as_attachment=True,
-                        download_name='improved_resume.pdf'
-                    )
-                else:
-                    return jsonify({
-                        'success': True,
-                        'improved_resume': result
-                    })
+                return jsonify({
+                    'success': True,
+                    'improved_resume': result
+                })
 
             except Exception as e:
                 return jsonify({

@@ -4,11 +4,6 @@ from pathlib import Path
 import httpx
 from PyPDF2 import PdfReader
 import markdown
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.units import inch
 import anthropic
 
 ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt'}
@@ -16,7 +11,6 @@ ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt'}
 class DocumentProcessor:
     def __init__(self, api_key: str):
         """Initialize the document processor with Claude API key."""
-        # Create httpx client with explicit proxy settings
         http_client = httpx.Client()
         self.client = anthropic.Anthropic(
             api_key=api_key, 
@@ -24,11 +18,10 @@ class DocumentProcessor:
         )
         
     def process_document(self, document_text: str, job_description: str, 
-                        improvement_prompt: str, output_format: str = 'text') -> Union[str, bytes]:
+                        improvement_prompt: str) -> str:
         """
-        Process document with Claude and return either text or PDF.
+        Process document with Claude and return improved text.
         """
-        # Prepare the complete prompt for Claude
         full_prompt = f"""
         RESUME:
         {document_text}
@@ -44,59 +37,20 @@ class DocumentProcessor:
         Format the output in a clean, professional way that will work well with ATS systems.
         """
         
-        # Call Claude API with appropriate version handling
         try:
             response = self.client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=1024,
+                model="claude-3-5-sonnet-latest",
+                max_tokens=4096,  # Increased token limit
                 temperature=0.7,
                 messages=[{
                     "role": "user",
                     "content": full_prompt
                 }]
             )
-            improved_text = response.content[0].text
-            
-            # Return based on requested format
-            if output_format == 'pdf':
-                return self._generate_pdf(improved_text)
-            else:
-                return improved_text
+            return response.content[0].text
                 
         except Exception as e:
             raise Exception(f"Error calling Claude API: {str(e)}")
-    
-    def _generate_pdf(self, text: str) -> bytes:
-        """Generate a PDF document from text and return as bytes."""
-        from io import BytesIO
-        buffer = BytesIO()
-        
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=72,
-            leftMargin=72,
-            topMargin=72,
-            bottomMargin=72
-        )
-        
-        styles = getSampleStyleSheet()
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=11,
-            leading=14,
-            spaceAfter=12
-        )
-        
-        story = []
-        paragraphs = text.split('\n\n')
-        for para in paragraphs:
-            if para.strip():
-                story.append(Paragraph(para.replace('\n', '<br/>'), normal_style))
-        
-        doc.build(story)
-        return buffer.getvalue()
 
 def get_anthropic_client():
     """Get a new Anthropic client instance"""
