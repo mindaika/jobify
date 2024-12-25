@@ -1,6 +1,6 @@
+import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-import os
 from werkzeug.utils import secure_filename
 from .utils import (
     allowed_file, 
@@ -50,7 +50,6 @@ def create_app():
             response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
             response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
             return response
-        """Process resume and return improved version"""
         try:
             # Validate file upload
             if 'resume' not in request.files:
