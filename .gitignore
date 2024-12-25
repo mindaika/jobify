@@ -1,8 +1,5 @@
 .env
-*.pem
-/nginx/ssl/*
 .DS_Store
-
 *.pyc
 *.pyo
 *.pyd
@@ -25,3 +22,4 @@ build/
 *.spec
 pip-log.txt
 pip-delete-this-directory.txt
+node-modules/
