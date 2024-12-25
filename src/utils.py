@@ -17,7 +17,7 @@ class DocumentProcessor:
             http_client=http_client
         )
         
-    def process_document(self, document_text: str, job_description: str, 
+    def process_document(self, document_text: str, job_description: str,
                         improvement_prompt: str) -> str:
         """
         Process document with Claude and return improved text.
