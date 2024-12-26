@@ -1,5 +1,4 @@
 .env
-.DS_Store
 *.pyc
 *.pyo
 *.pyd
@@ -23,3 +22,8 @@ build/
 pip-log.txt
 pip-delete-this-directory.txt
 node-modules/
+
+.DS_Store
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
