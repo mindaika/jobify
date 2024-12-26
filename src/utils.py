@@ -40,8 +40,8 @@ class DocumentProcessor:
         try:
             response = self.client.messages.create(
                 model="claude-3-5-sonnet-latest",
-                max_tokens=4096,  # Increased token limit
-                temperature=0.7,
+                max_tokens=4096,
+                temperature=0.9,
                 messages=[{
                     "role": "user",
                     "content": full_prompt
