@@ -26,18 +26,6 @@ def create_app():
         UPLOAD_FOLDER='/tmp',                 # Temporary storage for uploads
     )
 
-    @app.route('/')
-    def serve_static():
-        """Serve the static index.html file"""
-        return send_from_directory(app.static_folder, 'index.html')
-
-    @app.route('/<path:path>')
-    def serve_static_path(path):
-        """Serve static files or return index.html for client-side routing"""
-        if os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, 'index.html')
-
     @app.route('/api/status')
     def api_status():
         """Health check endpoint"""
@@ -119,5 +107,17 @@ def create_app():
                 'success': False,
                 'error': str(e)
             }), 500
+
+    @app.route('/')
+    def serve_static():
+        """Serve the static index.html file"""
+        return send_from_directory(app.static_folder, 'index.html')
+
+    @app.route('/<path:path>')
+    def serve_static_path(path):
+        """Serve static files or return index.html for client-side routing"""
+        if os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        return send_from_directory(app.static_folder, 'index.html')
 
     return app
