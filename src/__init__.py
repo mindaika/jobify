@@ -23,101 +23,25 @@ def create_app():
     
     app.config.update(
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
-        UPLOAD_FOLDER='/tmp',                 # Temporary storage for uploads
+        UPLOAD_FOLDER='/tmp', 
+        AUTH0_DOMAIN=os.getenv('AUTH0_DOMAIN'),
+        AUTH0_CLIENT_ID=os.getenv('AUTH0_CLIENT_ID'),
+        AUTH0_CLIENT_SECRET=os.getenv('AUTH0_CLIENT_SECRET'),
+        AUTH0_AUDIENCE=os.getenv('AUTH0_AUDIENCE')
     )
+    
+    required_env_vars = [
+        'AUTH0_DOMAIN',
+        'AUTH0_CLIENT_ID',
+        'AUTH0_CLIENT_SECRET',
+        'AUTH0_AUDIENCE'
+    ]
+    
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    if missing_vars:
+        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
-    @app.route('/api/status')
-    def api_status():
-        """Health check endpoint"""
-        return jsonify({"status": "okeydokey"})
-
-    @app.route('/api/process_resume', methods=['POST', 'OPTIONS'])
-    def process_resume():
-        if request.method == 'OPTIONS':
-            response = jsonify({'status': 'ok'})
-            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-            return response
-        try:
-            # Validate file upload
-            if 'resume' not in request.files:
-                return jsonify({
-                    'success': False,
-                    'error': 'No resume file uploaded'
-                }), 400
-            
-            file = request.files['resume']
-            if file.filename == '':
-                return jsonify({
-                    'success': False,
-                    'error': 'No file selected'
-                }), 400
-
-            if not allowed_file(file.filename):
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid file type. Supported types: PDF, Markdown, Text'
-                }), 400
-
-            # Get form data
-            job_description = request.form.get('job_description', '')
-            improvement_prompt = request.form.get('improvement_prompt', '')
-
-            if not job_description:
-                return jsonify({
-                    'success': False,
-                    'error': 'Job description is required'
-                }), 400
-
-            # Save and process file
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-
-            try:
-                # Extract text from uploaded file
-                resume_text = extract_text_from_file(filepath)
-            finally:
-                # Clean up temporary file
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-
-            # Process with Claude
-            try:
-                processor = get_anthropic_client()
-                result = processor.process_document(
-                    document_text=resume_text,
-                    job_description=job_description,
-                    improvement_prompt=improvement_prompt
-                )
-
-                return jsonify({
-                    'success': True,
-                    'improved_resume': result
-                })
-
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': f'Error processing resume: {str(e)}'
-                }), 500
-
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-
-    @app.route('/')
-    def serve_static():
-        """Serve the static index.html file"""
-        return send_from_directory(app.static_folder, 'index.html')
-
-    @app.route('/<path:path>')
-    def serve_static_path(path):
-        """Serve static files or return index.html for client-side routing"""
-        if os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, 'index.html')
-
+    from .routes import init_routes
+    init_routes(app)
+      
     return app
