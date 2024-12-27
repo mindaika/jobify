@@ -8,8 +8,11 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd -m appuser
+        gcc \
+        python3-dev \
+        libffi-dev \
+        && rm -rf /var/lib/apt/lists/*\
+        && useradd -m appuser
 
 COPY requirements.dev.txt .
 RUN pip install --no-cache-dir -r requirements.dev.txt
