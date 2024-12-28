@@ -8,12 +8,12 @@ authors = ["Randall Sewell <mindaika@garbanzo.monster>"]
 python = "^3.11"
 flask = "3.0.0"
 flask-cors = "4.0.0"
-anthropic = "0.5.0"
+anthropic = "0.42.0"
 pypdf2 = "3.0.1"
-markdown = ">=3.5.1"
+markdown = ">=3.5.2"
 python-dotenv = ">=1.0.0"
 werkzeug = "3.0.1"
-httpx = ">=0.24.1"
+httpx = ">=0.28.1"
 python-jose = ">=3.3.0"
 
 [tool.poetry.group.dev.dependencies]
