@@ -1,26 +1,46 @@
 import os
-from typing import Union
+from typing import Union, Optional
 from pathlib import Path
 import httpx
 from PyPDF2 import PdfReader
 import markdown
 import anthropic
+from .auth import AuthError
 
 ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt'}
 
 class DocumentProcessor:
+    """Handles document processing with Claude API."""
+    
     def __init__(self, api_key: str):
-        """Initialize the document processor with Claude API key."""
-        http_client = httpx.Client()
-        self.client = anthropic.Anthropic(
-            api_key=api_key, 
-            http_client=http_client
-        )
+        """
+        Initialize the document processor.
         
-    def process_document(self, document_text: str, job_description: str,
+        Args:
+            api_key: Anthropic API key
+        """
+        try:
+            self.client = anthropic.Anthropic(api_key=api_key)
+        except Exception as e:
+            raise AuthError(f"Failed to initialize Anthropic client: {str(e)}", 500)
+        
+    def process_document(self, 
+                        document_text: str, 
+                        job_description: str,
                         improvement_prompt: str) -> str:
         """
         Process document with Claude and return improved text.
+        
+        Args:
+            document_text: Original resume text
+            job_description: Job description text
+            improvement_prompt: Instructions for improvement
+            
+        Returns:
+            str: Improved resume text
+            
+        Raises:
+            AuthError: If API call fails
         """
         full_prompt = f"""
         RESUME:
@@ -35,6 +55,9 @@ class DocumentProcessor:
         Please improve this resume based on the job description and improvement request.
         Focus on matching relevant skills and experience while maintaining accuracy.
         Format the output in a clean, professional way that will work well with ATS systems.
+        Ensure the information in the updated resume is accurate and relevant. Focus on quality over quantity.
+        Try to match keywords of technologies listed. Return only the resume text, formatted in markdown, 
+        without any additional comments.
         """
         
         try:
@@ -50,21 +73,36 @@ class DocumentProcessor:
             return response.content[0].text
                 
         except Exception as e:
-            raise Exception(f"Error calling Claude API: {str(e)}")
+            raise AuthError(f"Error calling Claude API: {str(e)}", 500)
 
-def get_anthropic_client():
-    """Get a new Anthropic client instance"""
+def get_anthropic_client() -> DocumentProcessor:
+    """
+    Get a new Anthropic client instance.
+    
+    Returns:
+        DocumentProcessor: Initialized document processor
+        
+    Raises:
+        AuthError: If API key is missing or invalid
+    """
     api_key = os.getenv('ANTHROPIC_API_KEY')
     if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+        raise AuthError("ANTHROPIC_API_KEY environment variable is not set", 500)
     return DocumentProcessor(api_key)
 
-def allowed_file(filename):
-    """Check if a filename has an allowed extension."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def extract_text_from_pdf(file_path):
-    """Extract text from a PDF file."""
+def extract_text_from_pdf(file_path: Union[str, Path]) -> str:
+    """
+    Extract text from a PDF file.
+    
+    Args:
+        file_path: Path to PDF file
+        
+    Returns:
+        str: Extracted text
+        
+    Raises:
+        ValueError: If file reading fails
+    """
     try:
         reader = PdfReader(file_path)
         text = ""
@@ -72,10 +110,23 @@ def extract_text_from_pdf(file_path):
             text += page.extract_text() + "\n"
         return text.strip()
     except Exception as e:
-        raise Exception(f"Error extracting text from PDF: {str(e)}")
+        raise ValueError(f"Error extracting text from PDF: {str(e)}")
 
-def extract_text_from_file(file_path: Union[str, Path], file_type: str = None) -> str:
-    """Extract text from various file types."""
+def extract_text_from_file(file_path: Union[str, Path], 
+                          file_type: Optional[str] = None) -> str:
+    """
+    Extract text from various file types.
+    
+    Args:
+        file_path: Path to file
+        file_type: Optional file type override
+        
+    Returns:
+        str: Extracted text
+        
+    Raises:
+        ValueError: If file type is unsupported or reading fails
+    """
     file_path = Path(file_path)
     
     if file_type is None:

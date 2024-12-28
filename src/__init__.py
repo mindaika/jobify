@@ -1,17 +1,9 @@
 import os
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
-from .utils import (
-    allowed_file, 
-    extract_text_from_file, 
-    get_anthropic_client
-)
 
 def create_app():
-    app = Flask(__name__,
-                static_folder='static',
-                static_url_path='')
+    app = Flask(__name__)
 
     CORS(app, resources={
         r"/api/*": {
