@@ -1,6 +1,6 @@
-import os
 from flask import Flask
 from flask_cors import CORS
+from .routes import init_routes
 
 def create_app():
     app = Flask(__name__)
@@ -17,8 +17,7 @@ def create_app():
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
         UPLOAD_FOLDER='/tmp'
     )
-
-    from .routes import init_routes
+    
     init_routes(app)
 
     return app
