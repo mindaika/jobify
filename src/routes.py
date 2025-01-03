@@ -1,5 +1,7 @@
 import os
 from typing import Tuple, Dict, Any, Union
+from datetime import datetime
+import requests
 from flask import jsonify, request, Response
 from werkzeug.utils import secure_filename
 from .auth import AuthError, requires_auth
@@ -128,3 +130,19 @@ def init_routes(app):
             "error": ex.error
         })
         return response, ex.status_code
+
+    @app.route('/api/footer-data')
+    def get_footer_data() -> JsonResponse:
+        """Fetch year data from external API or fallback to current year."""
+        try:
+            response = requests.get('https://getfullyear.com/api/year')
+            if response.ok:
+                return jsonify(response.json())
+        except Exception as e:
+            app.logger.error(f"Error fetching year data: {str(e)}")
+        
+        # Fallback to current year if API fails
+        return jsonify({
+            'year': datetime.now().year,
+            'sponsored_by': 'None'
+        })
