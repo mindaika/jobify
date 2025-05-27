@@ -62,7 +62,7 @@ class DocumentProcessor:
         
         try:
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-latest",
+                model="claude-sonnet-4-0",
                 max_tokens=4096,
                 temperature=0.9,
                 messages=[{
