@@ -1,52 +1,52 @@
 FROM python:3.11-slim
 
-# Multi-arch build arguments (automatically provided by buildx)
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
-
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    FLASK_ENV=production
+    FLASK_APP="src:create_app()" \
+    FLASK_ENV=production \
+    FLASK_DEBUG=0 \
+    POETRY_VERSION=1.7.1 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1
 
-# Install system dependencies including build tools for ARM
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    libffi-dev \
-    libssl-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash appuser
-
-# Set working directory
 WORKDIR /app
 
-# Copy poetry files first for better caching
-COPY pyproject.toml poetry.lock* ./
+# Install system dependencies (may need additional libs for image processing)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        gcc \
+        python3-dev \
+        libffi-dev \
+        && rm -rf /var/lib/apt/lists/*
 
-# Install poetry and dependencies
-RUN pip install poetry && \
-    poetry config virtualenvs.create false && \
-    poetry install --only=main --no-interaction --no-ansi --no-root
+# Install poetry separately to avoid memory issues
+RUN curl -sSL https://install.python-poetry.org | python3 - \
+    && ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry
+
+# Create user
+RUN useradd -m appuser
+
+# Copy poetry files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies with memory optimization
+RUN poetry install --no-root --no-dev --no-interaction
 
 # Copy application code
-COPY src/ ./src/
+COPY src/ src/
 
-# Change ownership to non-root user
+# Set ownership
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5004/api/status || exit 1
+# Health check (adjust port for pixify)
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5005/api/status || exit 1
 
 # Expose port
-EXPOSE 5004
+EXPOSE 5005
 
-# Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5004", "--workers", "2", "--timeout", "60", "--access-logfile", "-", "src:create_app()"]
+# Use fewer workers for Pi and longer timeout for AI processing
+CMD ["poetry", "run", "gunicorn", "--bind", "0.0.0.0:5005", "--workers", "2", "--timeout", "120", "src:create_app()"]
