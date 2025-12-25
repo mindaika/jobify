@@ -135,9 +135,11 @@ def init_routes(app):
     def get_footer_data() -> JsonResponse:
         """Fetch year data from external API or fallback to current year."""
         try:
-            response = requests.get('https://getfullyear.com/api/year')
+            response = requests.get('https://getfullyear.com/api/year', timeout=5)
             if response.ok:
                 return jsonify(response.json())
+        except requests.exceptions.Timeout as e:
+            app.logger.warning(f"Timeout fetching year data: {str(e)}")
         except Exception as e:
             app.logger.error(f"Error fetching year data: {str(e)}")
         
