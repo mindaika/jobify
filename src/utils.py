@@ -6,6 +6,7 @@ from PyPDF2 import PdfReader
 import markdown
 import anthropic
 from .auth import AuthError
+from .secrets import get_anthropic_api_key
 
 ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt'}
 
@@ -78,16 +79,21 @@ class DocumentProcessor:
 def get_anthropic_client() -> DocumentProcessor:
     """
     Get a new Anthropic client instance.
-    
+
     Returns:
         DocumentProcessor: Initialized document processor
-        
+
     Raises:
         AuthError: If API key is missing or invalid
     """
-    api_key = os.getenv('ANTHROPIC_API_KEY')
+    try:
+        # Read from Docker secret file or fall back to environment variable
+        api_key = get_anthropic_api_key()
+    except ValueError as e:
+        raise AuthError(str(e), 500)
+
     if not api_key:
-        raise AuthError("ANTHROPIC_API_KEY environment variable is not set", 500)
+        raise AuthError("ANTHROPIC_API_KEY is not set", 500)
     return DocumentProcessor(api_key)
 
 def extract_text_from_pdf(file_path: Union[str, Path]) -> str:

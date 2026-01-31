@@ -20,19 +20,16 @@ RUN apt-get update && \
         && rm -rf /var/lib/apt/lists/* \
     && useradd -m appuser
 
-RUN pip install poetry==1.7.1
+RUN pip install --no-cache-dir poetry==1.7.1
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --no-root
+RUN poetry install --no-root --no-cache
 
 COPY src/ src/
 
 RUN chown -R appuser:appuser /app
 USER appuser
-
-HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:5004/api/status || exit 1
 
 EXPOSE 5004
 CMD ["poetry", "run", "gunicorn", "--bind", "0.0.0.0:5004", "--workers", "4", "--timeout", "60", "src:create_app()"]

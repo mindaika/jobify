@@ -21,7 +21,7 @@ RUN apt-get update && \
     && useradd -m appuser
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root
+RUN poetry install --no-root --no-cache
 
 COPY src/ src/
 
