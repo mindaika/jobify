@@ -17,6 +17,13 @@ RUN apt-get update && \
         gcc \
         python3-dev \
         libffi-dev \
+        libjpeg-dev \
+        zlib1g-dev \
+        libtiff-dev \
+        libfreetype6-dev \
+        liblcms2-dev \
+        libwebp-dev \
+        libopenjp2-7-dev \
         && rm -rf /var/lib/apt/lists/* \
     && useradd -m appuser
 
