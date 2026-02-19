@@ -1,8 +1,8 @@
 import os
-import json
 from typing import Tuple, Dict, Any, Union
 from datetime import datetime
 import requests
+import psycopg2
 from flask import jsonify, request, Response
 from werkzeug.utils import secure_filename
 from .auth import AuthError, requires_auth
@@ -10,30 +10,42 @@ from .utils import extract_text_from_file, get_anthropic_client
 
 JsonResponse = Union[Response, Tuple[Response, int]]
 
-# Hit counter data file path
-HIT_COUNTER_FILE = '/tmp/hit_counter.json'
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def _get_db_conn():
+    """Get a database connection."""
+    return psycopg2.connect(DATABASE_URL)
+
+def _init_hit_counter():
+    """Create the website schema and visitors table if they don't exist."""
+    with _get_db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("CREATE SCHEMA IF NOT EXISTS website")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS website.visitors (
+                    id SERIAL PRIMARY KEY,
+                    visitor_id VARCHAR(36) UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
 
 def get_hit_count() -> int:
-    """Get the current hit count from the JSON file."""
-    try:
-        if os.path.exists(HIT_COUNTER_FILE):
-            with open(HIT_COUNTER_FILE, 'r') as f:
-                data = json.load(f)
-                return data.get('count', 0)
-    except (json.JSONDecodeError, IOError):
-        pass
-    return 0
+    """Get the unique visitor count."""
+    with _get_db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM website.visitors")
+            return cur.fetchone()[0]
 
-def increment_hit_count() -> int:
-    """Increment and return the new hit count."""
-    count = get_hit_count()
-    count += 1
-    try:
-        with open(HIT_COUNTER_FILE, 'w') as f:
-            json.dump({'count': count}, f)
-    except IOError as e:
-        print(f"Error writing hit counter: {e}")
-    return count
+def register_visitor(visitor_id: str) -> int:
+    """Register a visitor and return the total count. Ignores duplicates."""
+    with _get_db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO website.visitors (visitor_id) VALUES (%s) ON CONFLICT DO NOTHING",
+                (visitor_id,)
+            )
+            cur.execute("SELECT COUNT(*) FROM website.visitors")
+            return cur.fetchone()[0]
 
 def allowed_file(filename: str) -> bool:
     """
@@ -187,9 +199,13 @@ def init_routes(app):
 
     @app.route('/api/hit-counter/increment', methods=['POST'])
     def increment_hit_counter() -> JsonResponse:
-        """Increment the hit counter."""
+        """Register a visitor and return the total unique visitor count."""
         try:
-            count = increment_hit_count()
+            body = request.get_json(silent=True) or {}
+            visitor_id = body.get('visitor_id', '')
+            if not visitor_id:
+                return jsonify({'error': 'visitor_id required'}), 400
+            count = register_visitor(visitor_id)
             return jsonify({'count': count})
         except Exception as e:
             app.logger.error(f"Error incrementing hit count: {str(e)}")
